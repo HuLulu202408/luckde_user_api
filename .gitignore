@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Environment variables
+.env
+.env.*
+
+# Allow example configuration
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+.mypy_cache/
+# Tests and logs
+.pytest_cache/
+.coverage
+*.log
+
