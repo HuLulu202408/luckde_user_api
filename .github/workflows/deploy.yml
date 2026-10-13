@@ -69,10 +69,10 @@ jobs:
           cd "$DEPLOY_DIR"
 
           echo "Pulling latest FastAPI image..."
-          docker compose pull api
+          docker compose pull fastapi
 
           echo "Updating FastAPI container..."
-          docker compose up -d --no-deps api
+          docker compose up -d --no-deps fastapi
 
           echo "Waiting for API health check..."
           for i in $(seq 1 30); do
