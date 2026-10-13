@@ -1,18 +1,16 @@
 import json
 import secrets
-
 import redis
 from pwdlib import PasswordHash
-
-from app.config import settings
+import app.core.config
 
 password_hash = PasswordHash.recommended()
 
 redis_client = redis.Redis(
-    host=settings.REDIS_HOST,
-    port=settings.REDIS_PORT,
-    db=settings.REDIS_DB,
-    password=settings.REDIS_PASSWORD or None,
+    host=app.core.config.settings.REDIS_HOST,
+    port=app.core.config.settings.REDIS_PORT,
+    db=app.core.config.settings.REDIS_DB,
+    password=app.core.config.settings.REDIS_PASSWORD or None,
     decode_responses=True,
     socket_connect_timeout=3,
     socket_timeout=3,
@@ -55,7 +53,7 @@ def save_token(token: str, user) -> None:
     redis_client.set(
         key,
         user_to_json(user),
-        ex=settings.TOKEN_TTL_SECONDS,
+        ex=app.core.config.settings.TOKEN_TTL_SECONDS,
     )
 
 

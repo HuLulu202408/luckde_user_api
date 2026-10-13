@@ -2,11 +2,11 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from app.models import UserBase, Registration, UserWallet
-from app.schemas import RegisterRequest
+from models.models import UserBase, Registration, UserWallet
+from app.schema import RegisterRequest
 from app.security import hash_password
 from app.security import verify_password
-from app.config import settings
+from app.core.config import settings
 
 def register_account(db: Session, data: RegisterRequest) -> UserBase:
     with db.begin():

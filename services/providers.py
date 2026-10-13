@@ -1,6 +1,6 @@
 from google.auth.transport.requests import Request
 from google.oauth2 import id_token
-from app.config import settings
+from app.core.config import settings
 import jwt
 from jwt import PyJWKClient
 

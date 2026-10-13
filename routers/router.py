@@ -6,13 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.schemas import (
+from app.db.db_session import get_db
+
+from app.schema import (
     RegisterRequest,
     LoginRequest,
     SocialLoginRequest,
 )
-from app.services import (
+from services.service import (
     register_account,
     authenticate_account,
     login_or_register_social,
@@ -24,11 +25,11 @@ from app.security import (
     delete_token,
     redis_client,
 )
-from app.models import UserBase
+from models import UserBase
 from app.security import user_to_json
-from app.config import settings
+from app.core.config import settings
 from app.security import verify_password
-from app.services import verify_google_token, verify_apple_token
+from services.providers import verify_google_token, verify_apple_token
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Auth"])
 
