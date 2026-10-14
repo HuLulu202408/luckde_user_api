@@ -3,7 +3,8 @@ import json
 import logging
 
 import redis
-from fastapi import APIRouter, Depends, HTTPException, Header, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -35,6 +36,15 @@ from services.providers import verify_google_token, verify_apple_token
 router = APIRouter(prefix="/api/v1/auth", tags=["Auth"])
 
 logger = logging.getLogger(__name__)
+
+# 声明成标准的安全方案后，Swagger UI 会出现右上角 Authorize 按钮：
+# 填一次 token 即对全页生效，不必再往参数框里手写 `Bearer `。
+# auto_error=False：缺少凭证时不抛 FastAPI 默认的 403，交给我们自己返回
+# 「没带头 / 格式不对 / token 为空」三种可区分的 401。
+bearer_scheme = HTTPBearer(
+    auto_error=False,
+    description="登录接口返回的 token（填原始 token 即可，无需自己加 Bearer 前缀）",
+)
 
 
 def auth_service_unavailable(exc: Exception) -> HTTPException:
@@ -182,11 +192,15 @@ def google_login(
 
 def require_token(
     request: Request,
-    authorization: str | None = Header(default=None),
+    _credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ):
+    # 这里仍直接读原始头：HTTPBearer 在 auto_error=False 时无法区分
+    # 「没带这个头」与「scheme 不是 Bearer」，而这两种情况要给不同提示。
+    authorization = request.headers.get("authorization", "")
+
     # 单独区分「没带这个头」与「带了但格式不对」：两者都回同一句话会让
     # Swagger / 网关丢头这类问题无从下手（历史上正是这个原因排查了很久）。
-    if not authorization or not authorization.strip():
+    if not authorization.strip():
         # 记录实际收到的头名（不含值）：如果列表里没有 authorization，
         # 就说明请求根本没带、或被反向代理/隧道吃掉了。
         logger.warning(
