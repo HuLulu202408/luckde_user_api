@@ -55,6 +55,27 @@ def require_provider_enabled(provider: str, client_id_env: str, enabled: bool) -
         )
 
 
+def describe_authorization_header(value: str) -> str:
+    """只描述 Authorization 头的形状，不回显内容（避免把 token 写进日志）。
+
+    典型问题：复制粘贴带出的不换行空格、中文输入法打出的全角空格、
+    漏掉 `Bearer ` 前缀。用字符码点表述，一眼就能看出是哪种。
+    """
+    stripped = value.strip()
+    parts = [f"长度={len(value)}"]
+
+    if stripped[:6].lower() == "bearer":
+        parts.append("以 Bearer 开头")
+        if len(stripped) > 6:
+            parts.append(
+                f"第 7 位字符码点 U+{ord(stripped[6]):04X}（应为空格 U+0020）"
+            )
+    else:
+        parts.append("未以 Bearer 开头")
+
+    return "，".join(parts)
+
+
 def issue_token(user: UserBase) -> dict:
     token = create_token()
     save_token(token, user)
@@ -162,12 +183,26 @@ def google_login(
 def require_token(
     authorization: str | None = Header(default=None),
 ):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Missing token")
+    # 单独区分「没带这个头」与「带了但格式不对」：两者都回同一句话会让
+    # Swagger / 网关丢头这类问题无从下手（历史上正是这个原因排查了很久）。
+    if not authorization or not authorization.strip():
+        raise HTTPException(401, "Missing Authorization header")
 
-    token = authorization[7:].strip()
+    # 容忍首尾空白；scheme 按 RFC 7235 做大小写不敏感比较（bearer 亦可）。
+    scheme, _, raw_token = authorization.strip().partition(" ")
+    token = raw_token.strip()
+
+    if scheme.lower() != "bearer":
+        logger.warning(
+            "Authorization 头无法识别为 Bearer 方案（%s）",
+            describe_authorization_header(authorization),
+        )
+        raise HTTPException(
+            401, 'Authorization header must look like "Bearer <token>"'
+        )
+
     if not token:
-        raise HTTPException(401, "Invalid token")
+        raise HTTPException(401, "Empty bearer token")
 
     try:
         user = get_token_user(token)
