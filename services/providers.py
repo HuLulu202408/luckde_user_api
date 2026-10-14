@@ -6,7 +6,11 @@ from jwt import PyJWKClient
 
 
 def verify_google_token(raw_token: str) -> dict:
-    
+
+    if not settings.google_login_enabled:
+        # 路由层应在入口处就拦截；走到这里说明调用方绕过了开关，属于编码错误。
+        raise RuntimeError("GOOGLE_CLIENT_ID 未配置，Google 登录入口应处于关闭状态")
+
     info = id_token.verify_oauth2_token(
         raw_token,
         Request(),
@@ -30,6 +34,9 @@ apple_jwks = PyJWKClient(APPLE_JWKS_URL)
 
 
 def verify_apple_token(raw_token: str) -> dict:
+
+    if not settings.apple_login_enabled:
+        raise RuntimeError("APPLE_CLIENT_ID 未配置，Apple 登录入口应处于关闭状态")
 
     signing_key = apple_jwks.get_signing_key_from_jwt(raw_token)
     claims = jwt.decode(

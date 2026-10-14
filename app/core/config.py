@@ -18,13 +18,31 @@ class Settings(BaseSettings):
 
     TOKEN_TTL_SECONDS: int = 7200
 
-    APPLE_CLIENT_ID: str
-    GOOGLE_CLIENT_ID: str
+    # 第三方登录凭证：留空即关闭对应登录入口。
+    # 这两个值来自 Apple / Google 开发者后台，属于环境相关配置，不应写进代码仓库；
+    # 之前声明为必填项，导致没有 .env 的部署环境在启动阶段直接 ValidationError。
+    APPLE_CLIENT_ID: str | None = None
+    GOOGLE_CLIENT_ID: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @staticmethod
+    def _configured(value: str | None) -> bool:
+        return bool(value and value.strip())
+
+    @property
+    def apple_login_enabled(self) -> bool:
+        """APPLE_CLIENT_ID 已配置时，Apple 登录入口才可用。"""
+        return self._configured(self.APPLE_CLIENT_ID)
+
+    @property
+    def google_login_enabled(self) -> bool:
+        """GOOGLE_CLIENT_ID 已配置时，Google 登录入口才可用。"""
+        return self._configured(self.GOOGLE_CLIENT_ID)
+
 
 settings = Settings()

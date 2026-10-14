@@ -74,18 +74,28 @@ jobs:
           echo "Updating FastAPI container..."
           docker compose up -d --no-deps fastapi
 
-          echo "Waiting for API health check..."
+          # /ready 会真实探测 MySQL 与 Redis；依赖不可用时发布会直接失败，
+          # 避免「进程活着但服务不可用」被误判为发布成功。
+          echo "Waiting for API readiness check (/ready)..."
+          ready=0
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8000/health; then
-              echo ""
-              echo "Deployment successful!"
-              exit 0
+            if body=$(curl -fsS http://127.0.0.1:8000/ready 2>/dev/null); then
+              echo "Ready: $body"
+              ready=1
+              break
             fi
 
             sleep 2
           done
 
-          echo "Deployment failed: health check timeout"
-          docker compose logs --tail=100 api
-          exit 1
+          if [ "$ready" -ne 1 ]; then
+            echo "Deployment failed: readiness check timeout"
+            echo "Last /ready response:"
+            curl -s http://127.0.0.1:8000/ready || true
+            echo ""
+            docker compose logs --tail=100 fastapi
+            exit 1
+          fi
+
+          echo "Deployment successful!"
 
