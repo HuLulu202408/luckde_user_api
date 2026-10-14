@@ -21,3 +21,7 @@ venv/
 .coverage
 *.log
 
+# 本地文档与测试脚本：按约定不纳入版本控制
+doc/
+tests/
+

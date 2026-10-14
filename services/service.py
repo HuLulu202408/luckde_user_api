@@ -8,17 +8,32 @@ from app.security import hash_password
 from app.security import verify_password
 from app.core.config import settings
 
+# 软删除的历史凭证需要让出 account 唯一键，改写为「此前缀 + 主键」的墓碑值，
+# 既释放唯一键，又保留该账号存在过的痕迹。主键唯一保证墓碑值不会重复。
+DELETED_ACCOUNT_PREFIX = "#deleted#"
+
+
 def register_account(db: Session, data: RegisterRequest) -> UserBase:
     with db.begin():
-        exists = db.scalar(
-            select(Registration.id).where(
+        existing = db.scalar(
+            select(Registration)
+            .where(
                 Registration.account == data.account,
                 Registration.regist_type == 0,
-                Registration.is_delete == 0,
             )
+            .with_for_update()
         )
-        if exists:
-            raise ValueError("ACCOUNT_EXISTS")
+
+        if existing is not None:
+            if existing.is_delete == 0:
+                # 存在未删除的同名账号（含被禁用的账号），视为名称已占用
+                raise ValueError("ACCOUNT_EXISTS")
+
+            # 账号此前被软删除：旧行仍占用 account 唯一键，直接插入必然冲突，
+            # 先把旧行改写为墓碑值，再插入全新账号。
+            existing.account = f"{DELETED_ACCOUNT_PREFIX}{existing.id}"
+            existing.updatetime = datetime.now()
+            db.flush()
 
         user = UserBase(
             nickname=data.nickname,
