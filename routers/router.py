@@ -3,7 +3,7 @@ import json
 import logging
 
 import redis
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -181,11 +181,21 @@ def google_login(
 
 
 def require_token(
+    request: Request,
     authorization: str | None = Header(default=None),
 ):
     # 单独区分「没带这个头」与「带了但格式不对」：两者都回同一句话会让
     # Swagger / 网关丢头这类问题无从下手（历史上正是这个原因排查了很久）。
     if not authorization or not authorization.strip():
+        # 记录实际收到的头名（不含值）：如果列表里没有 authorization，
+        # 就说明请求根本没带、或被反向代理/隧道吃掉了。
+        logger.warning(
+            "缺少 Authorization 头：path=%s client=%s 共收到 %d 个头 %s",
+            request.url.path,
+            request.client.host if request.client else "unknown",
+            len(request.headers),
+            sorted(request.headers.keys()),
+        )
         raise HTTPException(401, "Missing Authorization header")
 
     # 容忍首尾空白；scheme 按 RFC 7235 做大小写不敏感比较（bearer 亦可）。
