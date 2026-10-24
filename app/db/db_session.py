@@ -3,7 +3,7 @@ from sqlalchemy import URL, create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from app.core.config import settings
 
-
+# 下面的配置值仅用于本地开发环境，生产环境请通过环境变量覆盖。
 database_url = URL.create(
     drivername="mysql+pymysql",
     username=settings.MYSQL_USER,

@@ -1,15 +1,13 @@
 
 import json
 import logging
-
 import redis
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
-
 from app.db.db_session import get_db
-
 from app.schema import (
     RegisterRequest,
     LoginRequest,
@@ -33,6 +31,8 @@ from app.core.config import settings
 from app.security import verify_password
 from services.providers import verify_google_token, verify_apple_token
 
+
+# APIRouter：用于组织路由，支持前缀、标签、依赖等。
 router = APIRouter(prefix="/api/v1/auth", tags=["Auth"])
 
 logger = logging.getLogger(__name__)
